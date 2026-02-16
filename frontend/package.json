@@ -61,6 +61,7 @@
 "react-day-picker": "^8.10.1",
 "embla-carousel-react": "^8.5.1",
 "date-fns": "^3.6.0",
+    "input-otp": "^1.2.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {
