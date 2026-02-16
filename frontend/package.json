@@ -55,6 +55,7 @@
     "tailwind-merge": "^3.4.1",
     "vaul": "^0.9.3",
     "input-otp": "^1.2.4",
+    "react-resizable-panels": "^2.0.20",
     "zod": "^4.3.6"
   },
   "devDependencies": {
