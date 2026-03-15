@@ -25,7 +25,7 @@ try:
     Base.metadata.create_all(bind=engine)
     print("Database connected")
 except Exception as e:
-    print("Database connection failed:", e)
+    print("Database error:", e)
 
 # Routers
 app.include_router(predict_router)
