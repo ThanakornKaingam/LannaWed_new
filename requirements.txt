@@ -8,7 +8,7 @@ SQLAlchemy==2.0.46
 psycopg2-binary==2.9.11
 python-dotenv==1.0.1
 python-multipart==0.0.21
-passlib==1.7.4
+passlib[bcrypt]==1.7.4
 bcrypt==5.0.0
 Authlib==1.6.6
 python-jose==3.5.0
