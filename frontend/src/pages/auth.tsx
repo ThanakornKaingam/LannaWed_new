@@ -1,213 +1,96 @@
-import Head from "next/head";
-import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { z } from "zod";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-/* ---------------- SCHEMA ---------------- */
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const signupSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  fullName: z.string().min(2, "Name must be at least 2 characters"),
-});
-
-/* ---------------- COMPONENT ---------------- */
-
-export default function Auth() {
+export default function AuthPage() {
   const router = useRouter();
-  const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    fullName: "",
-  });
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    if (!router.isReady) return;
 
-      if (session) {
-        router.replace("/profile"); // ✅ หน้าที่มีอยู่จริง
+    const handleAuth = async () => {
+      // 1. ดึง Token จาก URL
+      const urlToken = router.query.token;
+      
+      if (urlToken && typeof urlToken === "string") {
+        localStorage.setItem("access_token", urlToken);
+        // ล้าง URL ให้สวยๆ
+        router.replace("/auth", undefined, { shallow: true });
+      }
+
+      // 2. เช็ก Token ล่าสุดจากกระเป๋า (LocalStorage)
+      const currentToken = localStorage.getItem("access_token");
+
+      if (!currentToken) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // 3. ยื่นบัตรให้ Backend ตรวจชื่อ
+        const res = await axios.get(`${API_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+          // ปิด withCredentials เพราะเราใช้ Token แล้ว
+        });
+        
+        const userData = res.data.user || res.data;
+        setUser(userData);
+
+        // 4. ถ้าผ่าน... วาร์ปกลับหน้าหลักทันที
+        setTimeout(() => {
+          router.push("/");
+        }, 500);
+
+      } catch (err) {
+        console.error("Auth failed:", err);
+        localStorage.removeItem("access_token");
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkSession();
-  }, [router]);
+    handleAuth();
+  }, [router.isReady, router.query.token]);
 
-  /* ---------------- SUBMIT ---------------- */
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (isLogin) {
-        const validation = loginSchema.safeParse({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (!validation.success) {
-          toast.error(validation.error.issues[0].message);
-          return;
-        }
-
-        const { error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) {
-          toast.error(error.message);
-          return;
-        }
-
-        toast.success("Welcome back!");
-        router.replace("/profile");
-      } else {
-        const validation = signupSchema.safeParse(formData);
-
-        if (!validation.success) {
-          toast.error(validation.error.issues[0].message);
-          return;
-        }
-
-        const { error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              full_name: formData.fullName,
-            },
-          },
-        });
-
-        if (error) {
-          toast.error(error.message);
-          return;
-        }
-
-        toast.success("Account created! Please sign in.");
-        setIsLogin(true);
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
+  // ฟังก์ชัน Logout (ล้างทุกอย่าง)
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    setUser(null);
+    window.location.href = "/";
   };
 
-  /* ---------------- FORGOT PASSWORD ---------------- */
-
-  const handleForgotPassword = async () => {
-    if (!formData.email) {
-      toast.error("Please enter your email first");
-      return;
-    }
-
-    const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    if (error) toast.error(error.message);
-    else toast.success("Password reset email sent!");
-  };
-
-  /* ---------------- UI ---------------- */
+  // --- UI เดิมของอ้าย เป๊ะๆ ---
+  if (loading) {
+    return <div style={{ color: "white", textAlign: "center", marginTop: "100px" }}>Loading...</div>;
+  }
 
   return (
-    <>
-      <Head>
-        <title>LannaVeg | Auth</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Head>
-
-      <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
-        <Card className="w-full max-w-md p-8">
-          <h1 className="text-2xl font-bold text-center mb-6">
-            {isLogin ? "Sign In" : "Create Account"}
-          </h1>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <Label>Full Name</Label>
-                <Input
-                  value={formData.fullName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fullName: e.target.value })
-                  }
-                />
-              </div>
-            )}
-
-            <div>
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            <div>
-              <Label>Password</Label>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            <Button className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
-            </Button>
-
-            {isLogin && (
-              <div className="text-right">
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="text-sm text-primary hover:underline"
-                >
-                  ลืมรหัสผ่าน?
-                </button>
-              </div>
-            )}
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-primary hover:underline"
-            >
-              {isLogin
-                ? "Don't have an account? Sign up"
-                : "Already have an account? Sign in"}
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", background: "#0f172a", color: "white" }}>
+      <div style={{ background: "#1e293b", padding: "40px", borderRadius: "12px", width: "350px", textAlign: "center" }}>
+        {user ? (
+          <>
+            <h2>Welcome {user.full_name || user.username}</h2>
+            <p>{user.email}</p>
+            <p style={{ fontSize: "12px", color: "#94a3b8" }}>Redirecting to home...</p>
+            <button onClick={handleLogout} style={{ marginTop: "20px", width: "100%", padding: "10px", borderRadius: "8px", border: "none", background: "#c73c3c", color: "white", cursor: "pointer" }}>
+              Logout
             </button>
-          </div>
-        </Card>
+          </>
+        ) : (
+          <>
+            <h2>Welcome</h2>
+            <p style={{ fontSize: "14px", opacity: 0.7 }}>Please login to continue</p>
+            <button onClick={() => (window.location.href = `${API_URL}/auth/google/login`)} style={{ marginTop: "20px", width: "100%", padding: "10px", borderRadius: "8px", border: "none", background: "#2563eb", color: "white", cursor: "pointer" }}>
+              Login with Google
+            </button>
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
 }
