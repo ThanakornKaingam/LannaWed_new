@@ -67,7 +67,6 @@ export default function Home() {
 
           <div className="space-x-4 md:space-x-6 text-sm flex items-center">
             <Link href="/classify" className="hover:text-green-300 transition">Classify</Link>
-            <Link href="/map" className="hover:text-green-300 transition">Map</Link>
             <Link href="/reviews" className="hover:text-green-300 transition">รีวิวทั้งหมด</Link>
 
             {loading ? (
