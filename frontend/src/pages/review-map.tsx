@@ -159,7 +159,7 @@ export default function ReviewMap() {
           </div>
 
           <input
-            placeholder="📍 ชื่อสถานที่ (เช่น สวนหลังบ้าน, ตลาดวโรรส)"
+            placeholder="📍 ชื่อสถานที่ (เช่น สวนหลังบ้าน, ตลาด)"
             value={placeName}
             onChange={(e) => setPlaceName(e.target.value)}
             className="w-full p-4 rounded-2xl bg-gray-800 border border-white/10 text-white focus:border-green-500 outline-none transition"
